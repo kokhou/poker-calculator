@@ -1,0 +1,1118 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MTT BB 计算训练器</title>
+  <style>
+    :root{
+      --bg:#0b1020;
+      --card:#121a33;
+      --muted:#93a4c7;
+      --text:#e9efff;
+      --accent:#5eead4;
+      --danger:#fb7185;
+      --ok:#34d399;
+      --line: rgba(255,255,255,.10);
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 18px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      background: radial-gradient(1200px 800px at 20% 10%, #1a2459 0%, transparent 60%),
+                  radial-gradient(900px 600px at 80% 30%, #0f5a5e 0%, transparent 55%),
+                  var(--bg);
+      color:var(--text);
+      min-height:100vh;
+      display:flex;
+      justify-content:center;
+      padding:16px;
+    }
+    .wrap{
+      width:min(980px, 100%);
+      display:grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap:14px;
+    }
+    @media (max-width: 900px){
+      .wrap{grid-template-columns:1fr; gap:12px;}
+    }
+    .card{
+      background: rgba(18,26,51,.88);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .card header{
+      padding:14px 16px;
+      border-bottom:1px solid var(--line);
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:space-between;
+    }
+    .title{
+      display:flex; flex-direction:column; gap:4px;
+    }
+    .title h1{
+      font-size: 16px; margin:0; letter-spacing:.2px;
+    }
+    .title small{ color: var(--muted); }
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:8px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+      font-size: 12px;
+      user-select:none;
+      white-space:nowrap;
+    }
+    .content{ padding: 14px 16px 16px; }
+    .row{ display:flex; gap:10px; flex-wrap:wrap; }
+    .kpi{
+      flex: 1 1 150px;
+      border:1px solid var(--line);
+      border-radius: 14px;
+      padding:10px 12px;
+      background: rgba(255,255,255,.03);
+      min-width: 150px;
+    }
+    .kpi .label{ color: var(--muted); font-size:12px; }
+    .kpi .value{ font-size:18px; margin-top:6px; }
+    .question{
+      margin-top: 12px;
+      border:1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px;
+      background: rgba(0,0,0,.16);
+    }
+    .qtop{
+      display:flex; gap:10px; flex-wrap:wrap;
+      align-items:flex-start; justify-content:space-between;
+    }
+    .qmeta{
+      display:flex; flex-direction:column; gap:6px;
+    }
+    .qmeta .mode{
+      display:inline-flex;
+      gap:8px;
+      align-items:center;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .qtext{
+      margin-top:10px;
+      font-size: 18px;
+      line-height:1.35;
+      letter-spacing:.2px;
+    }
+    .hint{
+      margin-top:10px;
+      padding:10px 12px;
+      border-radius: 14px;
+      border:1px dashed rgba(94,234,212,.35);
+      background: rgba(94,234,212,.08);
+      color: #b8fff4;
+      display:none;
+    }
+    .hint.show{ display:block; }
+    .controls{
+      margin-top:12px;
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:10px;
+    }
+    .inputRow{
+      display:flex; gap:10px; flex-wrap:wrap;
+      align-items:center;
+    }
+    input[type="number"], input[type="text"]{
+      width: 100%;
+      padding: 12px 12px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(0,0,0,.18);
+      color: var(--text);
+      font-size: 16px;
+      outline:none;
+    }
+    input[type="number"]:focus, input[type="text"]:focus{
+      border-color: rgba(94,234,212,.55);
+      box-shadow: 0 0 0 4px rgba(94,234,212,.12);
+    }
+    .btns{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    button{
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.05);
+      color: var(--text);
+      padding: 11px 12px;
+      border-radius: 14px;
+      font-size: 14px;
+      cursor:pointer;
+      transition: transform .04s ease, border-color .12s ease, background .12s ease;
+      user-select:none;
+      flex: 1 1 auto;
+      min-width: 120px;
+    }
+    button:hover{ border-color: rgba(94,234,212,.4); }
+    button:active{ transform: translateY(1px); }
+    .primary{
+      background: rgba(94,234,212,.14);
+      border-color: rgba(94,234,212,.35);
+    }
+    .danger{
+      background: rgba(251,113,133,.12);
+      border-color: rgba(251,113,133,.35);
+    }
+    .mc{
+      display:grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap:10px;
+    }
+    @media (max-width: 520px){
+      .mc{ grid-template-columns: 1fr; }
+      button{ min-width: unset; }
+    }
+    .mc button{
+      text-align:left;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      min-height: 46px;
+    }
+    .mc .tag{
+      color: var(--muted);
+      font-size: 12px;
+      border:1px solid var(--line);
+      padding:3px 8px;
+      border-radius: 999px;
+      white-space:nowrap;
+    }
+    .feedback{
+      margin-top:10px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.03);
+      display:none;
+    }
+    .feedback.show{ display:block; }
+    .feedback.ok{ border-color: rgba(52,211,153,.45); background: rgba(52,211,153,.10); }
+    .feedback.bad{ border-color: rgba(251,113,133,.45); background: rgba(251,113,133,.10); }
+    .feedback .small{ color: var(--muted); font-size: 12px; margin-top:6px; }
+    .side .content{ padding: 12px 14px 14px; }
+    .settings{
+      display:flex; flex-direction:column; gap:10px;
+      border:1px solid var(--line);
+      border-radius: 16px;
+      padding:12px;
+      background: rgba(0,0,0,.12);
+    }
+    .settings label{
+      font-size: 12px;
+      color: var(--muted);
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      align-items:center;
+    }
+    .settings .val{ color: var(--text); font-weight:600; }
+    .settings input[type="range"]{ width: 100%; margin-top:6px; }
+    .settings .toggle{
+      display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+      margin-top:6px;
+    }
+    .chip{
+      display:inline-flex; align-items:center; gap:8px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.03);
+      color: var(--muted);
+      font-size: 12px;
+      cursor:pointer;
+      user-select:none;
+    }
+    .chip.on{
+      border-color: rgba(94,234,212,.45);
+      background: rgba(94,234,212,.10);
+      color: #b8fff4;
+    }
+    .history{
+      margin-top:12px;
+      border-top: 1px solid var(--line);
+      padding-top:12px;
+    }
+    .histHeader{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-bottom:8px;
+    }
+    .histHeader h2{ margin:0; font-size: 13px; color: var(--muted); }
+    .list{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      max-height: 420px;
+      overflow:auto;
+      padding-right: 2px;
+    }
+    .item{
+      border:1px solid var(--line);
+      border-radius: 14px;
+      padding:10px 10px;
+      background: rgba(255,255,255,.02);
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+    .item .top{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    .item .badge{
+      font-size: 12px;
+      padding:3px 8px;
+      border-radius: 999px;
+      border:1px solid var(--line);
+      color: var(--muted);
+      white-space:nowrap;
+    }
+    .item.ok .badge{ border-color: rgba(52,211,153,.5); color: #b9f7dd; background: rgba(52,211,153,.10); }
+    .item.bad .badge{ border-color: rgba(251,113,133,.5); color: #ffd0d8; background: rgba(251,113,133,.10); }
+    .mono{ font-variant-numeric: tabular-nums; }
+    .footnote{
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height:1.4;
+    }
+    .kbd{
+      border:1px solid var(--line);
+      border-bottom-color: rgba(255,255,255,.18);
+      border-radius: 8px;
+      padding: 2px 7px;
+      background: rgba(0,0,0,.20);
+      color: var(--text);
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+      display:inline-block;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <!-- Main -->
+    <section class="card">
+      <header>
+        <div class="title">
+          <h1>MTT BB 计算训练器</h1>
+          <small>模式：混合出题｜作答：输入 + 选择题｜容错：±<span id="tolShow">1.5</span>BB｜无限练习</small>
+        </div>
+        <div class="pill">
+          <span>已保存记录</span>
+          <span class="mono" id="histCount">0</span>
+        </div>
+      </header>
+      <div class="content">
+        <div class="row">
+          <div class="kpi">
+            <div class="label">总题数</div>
+            <div class="value mono" id="kTotal">0</div>
+          </div>
+          <div class="kpi">
+            <div class="label">正确</div>
+            <div class="value mono" id="kCorrect">0</div>
+          </div>
+          <div class="kpi">
+            <div class="label">正确率</div>
+            <div class="value mono" id="kAcc">0%</div>
+          </div>
+          <div class="kpi">
+            <div class="label">当前连对</div>
+            <div class="value mono" id="kStreak">0</div>
+          </div>
+        </div>
+
+        <div class="question">
+          <div class="qtop">
+            <div class="qmeta">
+              <div class="mode" id="qMode">题型：—</div>
+              <div class="mode">提示：<span id="hintState">开</span>｜快捷键：<span class="kbd">Enter</span> 提交，<span class="kbd">N</span> 下一题，<span class="kbd">H</span> 提示</div>
+            </div>
+            <div class="pill">
+              <span>第</span><span class="mono" id="qNumber">1</span><span>题</span>
+            </div>
+          </div>
+
+          <div class="qtext mono" id="qText">—</div>
+
+          <div class="hint" id="hintBox">
+            <div id="hintText">—</div>
+          </div>
+
+          <div class="controls">
+            <div class="inputRow" id="inputWrap">
+              <input id="numInput" type="number" step="0.1" inputmode="decimal" placeholder="请输入你的答案…" />
+            </div>
+
+            <div class="mc" id="mcWrap" style="display:none;"></div>
+
+            <div class="btns">
+              <button class="primary" id="btnSubmit">提交</button>
+              <button id="btnNext">下一题</button>
+              <button id="btnHint">提示 开/关</button>
+            </div>
+
+            <div class="feedback" id="feedbackBox">
+              <div id="fbMain">—</div>
+              <div class="small mono" id="fbSmall">—</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="footnote">
+          说明：BB 计算 = 筹码 ÷ 大盲。你的设置是“随机范围”，系统会自动生成合理盲注与筹码（包含小数 BB 训练）。容错按 ±BB 计算：比如正确是 12.0BB，你答 10.6~13.4BB 都算对（容错 1.5BB）。
+        </div>
+      </div>
+    </section>
+
+    <!-- Side -->
+    <aside class="card side">
+      <header>
+        <div class="title">
+          <h1>设置与历史</h1>
+          <small>包含历史记录（localStorage），刷新不丢</small>
+        </div>
+        <div class="pill">
+          <span>容错</span>
+          <span class="mono">±</span><span class="mono" id="tolPill">1.5</span><span class="mono">BB</span>
+        </div>
+      </header>
+      <div class="content">
+        <div class="settings">
+          <div>
+            <label>
+              <span>容错（±BB）</span>
+              <span class="val mono" id="tolVal">1.5</span>
+            </label>
+            <input id="tolRange" type="range" min="0" max="3" value="1.5" step="0.1" />
+          </div>
+
+          <div>
+            <label>
+              <span>显示提示</span>
+              <span class="val" id="hintVal">开</span>
+            </label>
+            <div class="toggle">
+              <span class="chip on" id="chipHint">提示</span>
+              <span class="chip on" id="chipTrick">心算法</span>
+              <span class="chip on" id="chipUnits">单位提示</span>
+            </div>
+          </div>
+
+          <div>
+            <label>
+              <span>出题类型</span>
+              <span class="val" id="questionTypeVal">混合</span>
+            </label>
+            <div class="toggle">
+              <span class="chip" id="chipTypeMixed">混合</span>
+              <span class="chip" id="chipTypeBB">算BB</span>
+              <span class="chip" id="chipTypeStack">算筹码</span>
+            </div>
+            <div class="footnote">
+              混合：随机出两种题型<br/>
+              算BB：给筹码与大盲，计算 BB<br/>
+              算筹码：给 BB 与大盲，计算筹码
+            </div>
+          </div>
+
+          <div class="btns">
+            <button class="danger" id="btnReset">清空历史与统计</button>
+          </div>
+        </div>
+
+        <div class="history">
+          <div class="histHeader">
+            <h2>历史记录（最近 50 条）</h2>
+            <div class="pill">
+              <span>可见</span><span class="mono" id="histVisible">0</span>
+            </div>
+          </div>
+          <div class="list" id="histList"></div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    // ====== Storage Keys ======
+    const KEY = {
+      STATS: "bbtrainer_stats_v1",
+      HISTORY: "bbtrainer_history_v1",
+      SETTINGS: "bbtrainer_settings_v1"
+    };
+
+    // ====== Utils ======
+    const fmt = new Intl.NumberFormat("zh-Hans", { maximumFractionDigits: 1 });
+    const fmt0 = new Intl.NumberFormat("zh-Hans", { maximumFractionDigits: 0 });
+    const nowISO = () => new Date().toISOString();
+
+    function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
+    function round1(n){ return Math.round(n * 10) / 10; }
+
+    function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+
+    function shuffle(arr){
+      for(let i=arr.length-1;i>0;i--){
+        const j = Math.floor(Math.random()*(i+1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    // Generate "reasonable" BB sizes (random, MTT-like)
+    function randomBB(){
+      // Common MTT BB "steps" but still random
+      const bases = [50, 75, 100, 150, 200, 300, 400, 500, 600, 800, 1000, 1200, 1500, 1600, 2000, 2400, 2500, 3000, 3200, 4000, 5000, 6000, 8000, 10000, 12000, 15000, 20000];
+      // Sometimes scale up/down a bit
+      let bb = pick(bases);
+      // 20% chance multiply by 2 (late stage)
+      if(Math.random() < 0.20) bb *= 2;
+      // 15% chance multiply by 0.5 (earlier)
+      if(Math.random() < 0.15) bb = Math.max(25, Math.round(bb * 0.5));
+      return bb;
+    }
+
+    function randomBBCount(){
+      // Focus on practical MTT range, but keep random
+      const ranges = [
+        [3, 8],
+        [8, 15],
+        [15, 25],
+        [25, 40],
+        [40, 60]
+      ];
+      const [a,b] = pick(ranges);
+      const raw = a + Math.random() * (b-a);
+      // Sometimes make it .5-ish to train decimals
+      const isHalfy = Math.random() < 0.45;
+      return isHalfy ? round1(Math.round(raw*2)/2) : round1(raw);
+    }
+
+    function randomStack(bb, bbCount){
+      // Stack = bb * bbCount plus random "messiness"
+      let stack = bb * bbCount;
+
+      // Add some irregularity to mimic chip denominations
+      // (e.g., + 0~0.9BB worth chips)
+      if(Math.random() < 0.55){
+        const extraBB = Math.random() * 0.9;
+        stack += extraBB * bb;
+      }
+
+      // Round to nearest 100 / 500 / 1000 depending on size
+      const step = stack < 50000 ? 100 : (stack < 200000 ? 500 : 1000);
+      stack = Math.round(stack / step) * step;
+
+      // Ensure at least some minimum
+      stack = Math.max(step, stack);
+      return stack;
+    }
+
+    // ====== State ======
+    const defaultStats = { total:0, correct:0, streak:0, qnum:1 };
+    const defaultSettings = {
+      toleranceBB: 1.5,
+      showHint: true,
+      showTricks: true,
+      showUnits: true,
+      questionType: "mixed"  // "mixed" | "calcBB" | "calcStack"
+    };
+
+    let stats = loadJSON(KEY.STATS, defaultStats);
+    let history = loadJSON(KEY.HISTORY, []);
+    let settings = loadJSON(KEY.SETTINGS, defaultSettings);
+
+    function loadJSON(key, fallback){
+      try{
+        const raw = localStorage.getItem(key);
+        if(!raw) return structuredClone(fallback);
+        return Object.assign(structuredClone(fallback), JSON.parse(raw));
+      }catch(e){
+        return structuredClone(fallback);
+      }
+    }
+    function save(){
+      localStorage.setItem(KEY.STATS, JSON.stringify(stats));
+      localStorage.setItem(KEY.HISTORY, JSON.stringify(history.slice(0, 200))); // keep more in storage
+      localStorage.setItem(KEY.SETTINGS, JSON.stringify(settings));
+    }
+
+    // ====== DOM ======
+    const el = (id)=>document.getElementById(id);
+
+    const kTotal = el("kTotal");
+    const kCorrect = el("kCorrect");
+    const kAcc = el("kAcc");
+    const kStreak = el("kStreak");
+
+    const qNumber = el("qNumber");
+    const qMode = el("qMode");
+    const qText = el("qText");
+
+    const hintBox = el("hintBox");
+    const hintText = el("hintText");
+
+    const numInput = el("numInput");
+    const inputWrap = el("inputWrap");
+    const mcWrap = el("mcWrap");
+
+    const feedbackBox = el("feedbackBox");
+    const fbMain = el("fbMain");
+    const fbSmall = el("fbSmall");
+
+    const btnSubmit = el("btnSubmit");
+    const btnNext = el("btnNext");
+    const btnHint = el("btnHint");
+    const btnReset = el("btnReset");
+
+    const tolRange = el("tolRange");
+    const tolVal = el("tolVal");
+    const tolPill = el("tolPill");
+    const tolShow = el("tolShow");
+
+    const chipHint = el("chipHint");
+    const chipTrick = el("chipTrick");
+    const chipUnits = el("chipUnits");
+
+    const chipTypeMixed = el("chipTypeMixed");
+    const chipTypeBB = el("chipTypeBB");
+    const chipTypeStack = el("chipTypeStack");
+    const questionTypeVal = el("questionTypeVal");
+
+    const hintVal = el("hintVal");
+    const hintState = el("hintState");
+
+    const histList = el("histList");
+    const histCount = el("histCount");
+    const histVisible = el("histVisible");
+
+    // ====== Question Model ======
+    // type: "calcBB" | "calcStack"
+    // answerMode: "input" | "mc"
+    let current = null;
+    let locked = false;
+
+    function makeQuestion(){
+      const bb = randomBB();
+      
+      // Select question type based on settings
+      let type;
+      const qType = settings.questionType || "mixed";
+      if(qType === "calcBB"){
+        type = "calcBB";
+      } else if(qType === "calcStack"){
+        type = "calcStack";
+      } else {
+        // mixed: random
+        type = Math.random() < 0.55 ? "calcBB" : "calcStack";
+      }
+      
+      const answerMode = Math.random() < 0.55 ? "input" : "mc";
+
+      if(type === "calcBB"){
+        const bbCount = randomBBCount();
+        const stack = randomStack(bb, bbCount);
+        const exactBB = stack / bb;
+        const targetBB = round1(exactBB); // train decimals but round to 0.1
+        return {
+          id: crypto.randomUUID?.() || String(Math.random()).slice(2),
+          type,
+          answerMode,
+          bb,
+          stack,
+          target: targetBB,     // in BB
+          unit: "BB"
+        };
+      } else {
+        const bbCount = randomBBCount();
+        const targetStack = randomStack(bb, bbCount);
+        const exactBB = targetStack / bb;
+        const targetBB = round1(exactBB);
+        // Here we show BB count and ask for stack.
+        // Use targetStack as exact "correct", but grading uses tolerance in BB-equivalent.
+        return {
+          id: crypto.randomUUID?.() || String(Math.random()).slice(2),
+          type,
+          answerMode,
+          bb,
+          bbCount: targetBB,     // show this
+          target: targetStack,   // in chips
+          unit: "chips"
+        };
+      }
+    }
+
+    function buildQuestionUI(q){
+      locked = false;
+      feedbackBox.className = "feedback";
+      feedbackBox.style.display = "none";
+      numInput.value = "";
+      numInput.disabled = false;
+
+      qNumber.textContent = stats.qnum;
+
+      // Title
+      if(q.type === "calcBB"){
+        qMode.textContent = "题型：给筹码 + 大盲，计算 BB";
+        qText.innerHTML = `
+          你的筹码是 <b>${fmt0.format(q.stack)}</b>，当前大盲是 <b>${fmt0.format(q.bb)}</b>。<br/>
+          你大约是多少 BB？
+        `;
+      } else {
+        qMode.textContent = "题型：给 BB + 大盲，计算筹码";
+        qText.innerHTML = `
+          你想要的筹码深度是 <b>${fmt.format(q.bbCount)}</b> BB，当前大盲是 <b>${fmt0.format(q.bb)}</b>。<br/>
+          你的筹码大约应该是多少？
+        `;
+      }
+
+      // Hint
+      renderHint(q);
+
+      // Answer mode UI
+      if(q.answerMode === "mc"){
+        mcWrap.style.display = "grid";
+        inputWrap.style.display = "none";
+        renderMC(q);
+      } else {
+        mcWrap.style.display = "none";
+        inputWrap.style.display = "flex";
+        numInput.placeholder = q.type === "calcBB" ? "例如：12 或 12.5（单位：BB）" : "例如：36000（单位：筹码）";
+        // Focus for desktop
+        setTimeout(()=>numInput.focus(), 50);
+      }
+
+      updateTopHintState();
+    }
+
+    function renderHint(q){
+      const show = settings.showHint;
+      hintVal.textContent = show ? "开" : "关";
+      hintState.textContent = show ? "开" : "关";
+      hintBox.classList.toggle("show", show);
+
+      if(!show) return;
+
+      const tricks = [];
+      if(settings.showTricks){
+        tricks.push("心算：10BB = 大盲 × 10；去零法：先把两个数都去掉 0 再算。");
+      }
+      if(settings.showUnits){
+        tricks.push(q.type === "calcBB"
+          ? "公式：BB = 筹码 ÷ 大盲。"
+          : "公式：筹码 = BB × 大盲。");
+      }
+
+      let extra = "";
+      if(q.type === "calcBB"){
+        extra = `你可以先估：${fmt0.format(q.bb)} × 10 = ${fmt0.format(q.bb*10)}（10BB 基准）。`;
+      } else {
+        extra = `先算 ${fmt0.format(q.bb)} × ${fmt.format(q.bbCount)}。`;
+      }
+
+      hintText.innerHTML = `
+        <div>提示：</div>
+        <ul style="margin:8px 0 0 18px; padding:0; color:#c9fff7;">
+          ${tricks.map(t=>`<li>${t}</li>`).join("")}
+          <li>${extra}</li>
+          <li>容错：±${fmt.format(settings.toleranceBB)}BB</li>
+        </ul>
+      `;
+    }
+
+    function renderMC(q){
+      mcWrap.innerHTML = "";
+      const correct = q.type === "calcBB" ? q.target : q.target;
+
+      const options = [];
+
+      if(q.type === "calcBB"){
+        // BB options around target
+        const t = q.target;
+        const deltas = [0, -1, +1, -2, +2, -3, +3, -0.5, +0.5, -1.5, +1.5];
+        const pool = new Set();
+        for(const d of deltas){
+          const v = round1(Math.max(0.5, t + d));
+          pool.add(v);
+        }
+        // Add random nearby values
+        while(pool.size < 8){
+          const d = (Math.random()*8 - 4);
+          pool.add(round1(Math.max(0.5, t + d)));
+        }
+        const arr = Array.from(pool);
+        // Ensure correct included
+        if(!arr.includes(t)) arr.push(t);
+        // Pick 4 unique including correct
+        shuffle(arr);
+        const picked = [t];
+        for(const v of arr){
+          if(picked.length >= 4) break;
+          if(v !== t) picked.push(v);
+        }
+        shuffle(picked);
+        for(const v of picked){
+          options.push({ label: `${fmt.format(v)} BB`, value: v });
+        }
+      } else {
+        // Stack options: around targetStack, but present chip-like values
+        const tStack = q.target;
+        const bb = q.bb;
+        const tBB = tStack / bb;
+
+        const deltasBB = [0, -1, +1, -2, +2, -3, +3, -1.5, +1.5];
+        const pool = new Set();
+        for(const d of deltasBB){
+          const candidateBB = Math.max(0.5, tBB + d);
+          let s = candidateBB * bb;
+          // Round to nice step
+          const step = s < 50000 ? 100 : (s < 200000 ? 500 : 1000);
+          s = Math.round(s / step) * step;
+          pool.add(s);
+        }
+        while(pool.size < 8){
+          const d = (Math.random()*10 - 5);
+          const candidateBB = Math.max(0.5, tBB + d);
+          let s = candidateBB * bb;
+          const step = s < 50000 ? 100 : (s < 200000 ? 500 : 1000);
+          s = Math.round(s / step) * step;
+          pool.add(s);
+        }
+        const arr = Array.from(pool);
+        if(!arr.includes(tStack)) arr.push(tStack);
+        shuffle(arr);
+        const picked = [tStack];
+        for(const v of arr){
+          if(picked.length >= 4) break;
+          if(v !== tStack) picked.push(v);
+        }
+        shuffle(picked);
+        for(const v of picked){
+          options.push({ label: `${fmt0.format(v)}`, value: v });
+        }
+      }
+
+      const letters = ["A","B","C","D"];
+      options.forEach((opt, idx)=>{
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.innerHTML = `<span><span class="tag">${letters[idx]}</span> ${opt.label}</span><span class="tag">选</span>`;
+        btn.addEventListener("click", ()=>{
+          if(locked) return;
+          gradeAnswer(opt.value, "mc");
+        });
+        mcWrap.appendChild(btn);
+      });
+    }
+
+    function getToleranceBB(){
+      return Number(settings.toleranceBB) || 1.5;
+    }
+
+    // Grading: compare in BB-space to respect "±1.5BB"
+    function gradeAnswer(userValue, source){
+      if(locked) return;
+      locked = true;
+
+      const tol = getToleranceBB();
+      let correct = false;
+      let correctValueDisplay = "";
+      let yourValueDisplay = "";
+      let deltaBB = 0;
+
+      if(current.type === "calcBB"){
+        const userBB = Number(userValue);
+        const targetBB = Number(current.target);
+        deltaBB = Math.abs(userBB - targetBB);
+        correct = deltaBB <= tol;
+        correctValueDisplay = `${fmt.format(targetBB)} BB`;
+        yourValueDisplay = `${fmt.format(userBB)} BB`;
+      } else {
+        const userStack = Number(userValue);
+        const targetStack = Number(current.target);
+
+        const userBB = userStack / current.bb;
+        const targetBB = targetStack / current.bb;
+        deltaBB = Math.abs(userBB - targetBB);
+
+        correct = deltaBB <= tol;
+        correctValueDisplay = `${fmt0.format(targetStack)}（约 ${fmt.format(targetBB)} BB）`;
+        yourValueDisplay = `${fmt0.format(userStack)}（约 ${fmt.format(userBB)} BB）`;
+      }
+
+      // Update stats
+      stats.total += 1;
+      if(correct){
+        stats.correct += 1;
+        stats.streak += 1;
+      } else {
+        stats.streak = 0;
+      }
+
+      // Save history (latest first)
+      const rec = {
+        t: nowISO(),
+        id: current.id,
+        type: current.type,
+        answerMode: current.answerMode,
+        bb: current.bb,
+        stack: current.stack ?? null,
+        bbCount: current.bbCount ?? null,
+        target: current.target,
+        user: Number(userValue),
+        deltaBB: round1(deltaBB),
+        tol: tol,
+        correct
+      };
+      history.unshift(rec);
+      history = history.slice(0, 50);
+
+      save();
+      renderStats();
+      renderHistory();
+
+      // Feedback UI
+      feedbackBox.style.display = "block";
+      feedbackBox.classList.add("show");
+      feedbackBox.classList.remove("ok","bad");
+      feedbackBox.classList.add(correct ? "ok" : "bad");
+
+      fbMain.textContent = correct ? "正确" : "不正确";
+      fbSmall.textContent = `你的答案：${yourValueDisplay} ｜ 正确：${correctValueDisplay} ｜ 误差：${fmt.format(rec.deltaBB)}BB（容错 ±${fmt.format(tol)}BB）`;
+
+      // Lock inputs
+      numInput.disabled = true;
+    }
+
+    function submitFromInput(){
+      if(locked) return;
+      const v = numInput.value.trim();
+      if(v === "") return;
+
+      const num = Number(v);
+      if(!Number.isFinite(num)) return;
+
+      gradeAnswer(num, "input");
+    }
+
+    function nextQuestion(){
+      stats.qnum += 1;
+      save();
+      current = makeQuestion();
+      buildQuestionUI(current);
+      renderStats();
+    }
+
+    // ====== Render ======
+    function renderStats(){
+      kTotal.textContent = stats.total;
+      kCorrect.textContent = stats.correct;
+      const acc = stats.total ? Math.round((stats.correct / stats.total) * 100) : 0;
+      kAcc.textContent = acc + "%";
+      kStreak.textContent = stats.streak;
+
+      histCount.textContent = history.length;
+      histVisible.textContent = history.length;
+
+      const tol = getToleranceBB();
+      tolVal.textContent = fmt.format(tol);
+      tolPill.textContent = fmt.format(tol);
+      tolShow.textContent = fmt.format(tol);
+    }
+
+    function renderHistory(){
+      histList.innerHTML = "";
+      history.forEach((r, idx)=>{
+        const div = document.createElement("div");
+        div.className = "item " + (r.correct ? "ok" : "bad");
+
+        const when = new Date(r.t);
+        const time = when.toLocaleString("zh-Hans", { hour12:false });
+
+        let qdesc = "";
+        if(r.type === "calcBB"){
+          qdesc = `筹码 ${fmt0.format(r.stack)} ÷ 大盲 ${fmt0.format(r.bb)} → BB`;
+        } else {
+          qdesc = `目标 ${fmt.format(r.bbCount)}BB × 大盲 ${fmt0.format(r.bb)} → 筹码`;
+        }
+
+        const userShow = (r.type === "calcBB") ? `${fmt.format(r.user)} BB` : `${fmt0.format(r.user)}`;
+        const tgtShow = (r.type === "calcBB") ? `${fmt.format(r.target)} BB` : `${fmt0.format(r.target)}`;
+
+        div.innerHTML = `
+          <div class="top">
+            <div class="mono" style="color:var(--text)">${qdesc}</div>
+            <div class="badge">${r.correct ? "OK" : "错"}</div>
+          </div>
+          <div class="mono" style="color:var(--muted); font-size:12px">
+            你的：${userShow} ｜ 正确：${tgtShow} ｜ 误差：${fmt.format(r.deltaBB)}BB ｜ ${time}
+          </div>
+        `;
+        histList.appendChild(div);
+      });
+    }
+
+    function updateTopHintState(){
+      const show = settings.showHint;
+      hintBox.classList.toggle("show", show);
+      hintVal.textContent = show ? "开" : "关";
+      hintState.textContent = show ? "开" : "关";
+      chipHint.classList.toggle("on", !!settings.showHint);
+      chipTrick.classList.toggle("on", !!settings.showTricks);
+      chipUnits.classList.toggle("on", !!settings.showUnits);
+      renderHint(current);
+      save();
+    }
+
+    // ====== Events ======
+    btnSubmit.addEventListener("click", ()=>{
+      if(current.answerMode === "mc") return; // MC uses click
+      submitFromInput();
+    });
+
+    btnNext.addEventListener("click", ()=> nextQuestion());
+
+    btnHint.addEventListener("click", ()=>{
+      settings.showHint = !settings.showHint;
+      updateTopHintState();
+    });
+
+    btnReset.addEventListener("click", ()=>{
+      const ok = confirm("确定要清空历史与统计吗？此操作不可恢复。");
+      if(!ok) return;
+      stats = structuredClone(defaultStats);
+      history = [];
+      save();
+      renderStats();
+      renderHistory();
+      current = makeQuestion();
+      buildQuestionUI(current);
+    });
+
+    tolRange.addEventListener("input", ()=>{
+      settings.toleranceBB = Number(tolRange.value);
+      renderStats();
+      updateTopHintState();
+      save();
+    });
+
+    chipHint.addEventListener("click", ()=>{
+      settings.showHint = !settings.showHint;
+      updateTopHintState();
+    });
+    chipTrick.addEventListener("click", ()=>{
+      settings.showTricks = !settings.showTricks;
+      updateTopHintState();
+    });
+    chipUnits.addEventListener("click", ()=>{
+      settings.showUnits = !settings.showUnits;
+      updateTopHintState();
+    });
+
+    function updateQuestionTypeUI(){
+      const qType = settings.questionType || "mixed";
+      const labels = {
+        mixed: "混合",
+        calcBB: "算BB",
+        calcStack: "算筹码"
+      };
+      questionTypeVal.textContent = labels[qType] || "混合";
+      
+      chipTypeMixed.classList.toggle("on", qType === "mixed");
+      chipTypeBB.classList.toggle("on", qType === "calcBB");
+      chipTypeStack.classList.toggle("on", qType === "calcStack");
+    }
+
+    chipTypeMixed.addEventListener("click", ()=>{
+      settings.questionType = "mixed";
+      updateQuestionTypeUI();
+      save();
+      if(current){
+        current = makeQuestion();
+        buildQuestionUI(current);
+      }
+    });
+    chipTypeBB.addEventListener("click", ()=>{
+      settings.questionType = "calcBB";
+      updateQuestionTypeUI();
+      save();
+      if(current){
+        current = makeQuestion();
+        buildQuestionUI(current);
+      }
+    });
+    chipTypeStack.addEventListener("click", ()=>{
+      settings.questionType = "calcStack";
+      updateQuestionTypeUI();
+      save();
+      if(current){
+        current = makeQuestion();
+        buildQuestionUI(current);
+      }
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener("keydown", (e)=>{
+      const key = e.key.toLowerCase();
+      if(key === "enter"){
+        if(current?.answerMode === "input"){
+          submitFromInput();
+        }
+      } else if(key === "n"){
+        nextQuestion();
+      } else if(key === "h"){
+        settings.showHint = !settings.showHint;
+        updateTopHintState();
+      }
+    });
+
+    // Allow tapping outside to focus input (mobile friendly)
+    qText.addEventListener("click", ()=>{
+      if(current?.answerMode === "input" && !locked) numInput.focus();
+    });
+
+    // ====== Init ======
+    (function init(){
+      // Apply loaded settings to UI
+      tolRange.value = String(clamp(Number(settings.toleranceBB ?? 1.5), 0, 3));
+      settings.toleranceBB = Number(tolRange.value);
+
+      renderStats();
+      renderHistory();
+
+      updateQuestionTypeUI();
+      current = makeQuestion();
+      buildQuestionUI(current);
+      updateTopHintState();
+    })();
+  </script>
+</body>
+</html>
