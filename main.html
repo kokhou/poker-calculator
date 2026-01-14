@@ -313,6 +313,66 @@
       font-variant-numeric: tabular-nums;
       display:inline-block;
     }
+    .mini-calc{
+      margin-top: 10px;
+      padding: 12px;
+      border-radius: 14px;
+      border:1px solid var(--line);
+      background: rgba(0,0,0,.12);
+    }
+    .calc-display{
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: rgba(0,0,0,.18);
+      color: var(--text);
+      font-size: 18px;
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+      outline: none;
+      margin-bottom: 10px;
+      font-family: ui-monospace, monospace;
+    }
+    .calc-display:focus{
+      border-color: rgba(94,234,212,.55);
+      box-shadow: 0 0 0 4px rgba(94,234,212,.12);
+    }
+    .calc-buttons{
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+    .calc-btn{
+      padding: 10px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.05);
+      color: var(--text);
+      border-radius: 10px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all .1s ease;
+      user-select: none;
+    }
+    .calc-btn:hover{
+      border-color: rgba(94,234,212,.4);
+      background: rgba(94,234,212,.08);
+    }
+    .calc-btn:active{
+      transform: scale(0.95);
+    }
+    .calc-btn.op{
+      background: rgba(94,234,212,.14);
+      border-color: rgba(94,234,212,.35);
+    }
+    .calc-btn.clear{
+      background: rgba(251,113,133,.12);
+      border-color: rgba(251,113,133,.35);
+    }
+    .calc-btn.equals{
+      background: rgba(52,211,153,.14);
+      border-color: rgba(52,211,153,.35);
+    }
   </style>
 </head>
 <body>
@@ -364,6 +424,32 @@
 
           <div class="hint" id="hintBox">
             <div id="hintText">—</div>
+          </div>
+
+          <div class="mini-calc">
+            <input type="text" class="calc-display" id="calcDisplay" readonly value="0" />
+            <div class="calc-buttons">
+              <button class="calc-btn clear" data-action="clear">C</button>
+              <button class="calc-btn clear" data-action="clearAll">CE</button>
+              <button class="calc-btn op" data-action="backspace">⌫</button>
+              <button class="calc-btn op" data-value="/">÷</button>
+              <button class="calc-btn" data-value="7">7</button>
+              <button class="calc-btn" data-value="8">8</button>
+              <button class="calc-btn" data-value="9">9</button>
+              <button class="calc-btn op" data-value="*">×</button>
+              <button class="calc-btn" data-value="4">4</button>
+              <button class="calc-btn" data-value="5">5</button>
+              <button class="calc-btn" data-value="6">6</button>
+              <button class="calc-btn op" data-value="-">−</button>
+              <button class="calc-btn" data-value="1">1</button>
+              <button class="calc-btn" data-value="2">2</button>
+              <button class="calc-btn" data-value="3">3</button>
+              <button class="calc-btn op" data-value="+">+</button>
+              <button class="calc-btn" data-value="0">0</button>
+              <button class="calc-btn" data-value=".">.</button>
+              <button class="calc-btn equals" data-action="equals">=</button>
+              <button class="calc-btn op" data-value="%">%</button>
+            </div>
           </div>
 
           <div class="controls">
@@ -991,6 +1077,121 @@
       renderHint(current);
       save();
     }
+
+    // ====== Mini Calculator ======
+    const calcDisplay = el("calcDisplay");
+    let calcValue = "0";
+    let calcPrevValue = null;
+    let calcOperator = null;
+    let calcWaitingForOperand = false;
+
+    function calcUpdateDisplay(){
+      calcDisplay.value = calcValue;
+    }
+
+    function calcInputNumber(num){
+      if(calcWaitingForOperand){
+        calcValue = num;
+        calcWaitingForOperand = false;
+      } else {
+        calcValue = calcValue === "0" ? num : calcValue + num;
+      }
+      calcUpdateDisplay();
+    }
+
+    function calcInputDecimal(){
+      if(calcWaitingForOperand){
+        calcValue = "0.";
+        calcWaitingForOperand = false;
+      } else if(calcValue.indexOf(".") === -1){
+        calcValue += ".";
+      }
+      calcUpdateDisplay();
+    }
+
+    function calcInputOperator(nextOperator){
+      const inputValue = parseFloat(calcValue);
+
+      if(calcPrevValue === null){
+        calcPrevValue = inputValue;
+      } else if(calcOperator){
+        const result = calcPerformOperation(calcPrevValue, inputValue, calcOperator);
+        calcValue = String(result);
+        calcPrevValue = result;
+        calcUpdateDisplay();
+      }
+
+      calcOperator = nextOperator;
+      calcWaitingForOperand = true;
+    }
+
+    function calcPerformOperation(prev, current, op){
+      switch(op){
+        case "+": return prev + current;
+        case "-": return prev - current;
+        case "*": return prev * current;
+        case "/": return current !== 0 ? prev / current : 0;
+        case "%": return prev % current;
+        default: return current;
+      }
+    }
+
+    function calcPerformCalculation(){
+      if(calcOperator === null || calcPrevValue === null) return;
+
+      const inputValue = parseFloat(calcValue);
+      const result = calcPerformOperation(calcPrevValue, inputValue, calcOperator);
+      
+      calcValue = String(result);
+      calcPrevValue = null;
+      calcOperator = null;
+      calcWaitingForOperand = true;
+      calcUpdateDisplay();
+    }
+
+    function calcClear(){
+      calcValue = "0";
+      calcPrevValue = null;
+      calcOperator = null;
+      calcWaitingForOperand = false;
+      calcUpdateDisplay();
+    }
+
+    function calcBackspace(){
+      if(calcWaitingForOperand) return;
+      if(calcValue.length > 1){
+        calcValue = calcValue.slice(0, -1);
+      } else {
+        calcValue = "0";
+      }
+      calcUpdateDisplay();
+    }
+
+    // Calculator button event listeners
+    document.querySelectorAll(".calc-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const value = btn.getAttribute("data-value");
+        const action = btn.getAttribute("data-action");
+
+        if(value){
+          if(value === "."){
+            calcInputDecimal();
+          } else if(["0","1","2","3","4","5","6","7","8","9"].includes(value)){
+            calcInputNumber(value);
+          } else if(["+","-","*","/","%"].includes(value)){
+            calcInputOperator(value);
+          }
+        } else if(action === "equals"){
+          calcPerformCalculation();
+        } else if(action === "clear"){
+          calcClear();
+        } else if(action === "clearAll"){
+          calcClear();
+        } else if(action === "backspace"){
+          calcBackspace();
+        }
+      });
+    });
 
     // ====== Events ======
     btnSubmit.addEventListener("click", ()=>{
